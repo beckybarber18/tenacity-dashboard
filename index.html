@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Team Tenacity Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout idea: aubergine header with tabs; announcements first, then what's next, then a two-column grid of cards that stacks on phones. */
+:root{
+  color-scheme: light;
+  --ink:#1E1530; --ink-2:#4A3F5E; --ink-3:#5C516F;
+  --ground:#F6F3FA; --card:#FFFFFF; --line:#E2D9EF; --line-2:#ECE6F4; --soft:#F3F0F7;
+  --plum:#2A1548; --purple:#5B2A9D; --purple-dark:#3A1470; --lilac:#E4D7F7; --lilac-text:#D9C8F5;
+  --pink:#FBE1EE; --pink-text:#8A1F55;
+  --warn-bg:#FFF4E0; --warn:#8A4B00; --warn-2:#6B4A12; --ok:#1F5E3A; --ok-bg:#E3F3E9;
+  --display:'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+  --body:Inter, 'Segoe UI', system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--body);color:var(--ink);background:var(--ground);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+a{color:var(--purple)}a:hover{color:var(--purple-dark)}
+:focus-visible{outline:3px solid #9B6BE0;outline-offset:2px;border-radius:6px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+p{margin:0}
+ul{list-style:none;margin:0;padding:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.num{font-variant-numeric:tabular-nums}
+
+header.top{background:var(--plum);color:#fff}
+.top-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;padding-top:18px;padding-bottom:8px}
+.brand b{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:.01em;line-height:1.2}
+.brand span{font-size:13px;color:var(--lilac-text);margin-left:10px}
+.who{font-size:13px;color:var(--lilac-text);overflow-wrap:anywhere}
+.tabs{display:flex;gap:4px}
+.tabs a{color:var(--lilac-text);text-decoration:none;font-size:15px;font-weight:500;padding:12px 14px;min-height:44px;border-bottom:3px solid transparent}
+.tabs a[aria-current="page"]{color:#fff;font-weight:600;border-bottom-color:#C9A8FF}
+.preview{background:var(--warn-bg);color:var(--warn-2);font-size:13px;padding:8px 0}
+.preview .wrap{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.preview label{font-weight:600}
+.preview select{font-family:inherit;font-size:16px;min-height:44px;padding:0 10px;border-radius:10px;border:1px solid #B98A3A;background:#fff;color:var(--ink);max-width:100%}
+
+main{display:flex;flex-direction:column;gap:20px;padding-top:28px;padding-bottom:56px}
+.view[hidden]{display:none}
+.view{display:flex;flex-direction:column;gap:20px}
+.hello{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.hello h1{font-size:34px;line-height:1.1;color:var(--plum)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.hello .chips{margin-top:8px}
+.chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--lilac);color:var(--purple-dark);white-space:nowrap}
+.chip.oa{background:var(--pink);color:var(--pink-text)}
+.chip.coach{background:var(--plum);color:#fff}
+.status{font-size:15px;color:var(--ink-2)}
+.status a{color:inherit;text-decoration:none}.status b.count{color:var(--warn);text-decoration:underline}.status b.clear{color:var(--ok)}
+
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card[hidden]{display:none}
+.card{scroll-margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card h2{font-size:19px;font-weight:600;color:var(--plum)}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--purple)}
+.head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;justify-content:space-between}
+.meta{font-size:13px;color:var(--ink-3)}
+.cardlink{font-size:14px;font-weight:600;padding:11px 0;align-self:flex-start}
+.note{font-size:13px;color:var(--ink-2);padding:12px 14px;border-radius:10px;background:var(--soft);overflow-wrap:anywhere}
+.empty{font-size:14px;color:var(--ink-2);padding:12px 14px;border-radius:10px;background:var(--soft)}
+
+/* Announcements */
+.anns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 32px}
+.ann{display:flex;flex-direction:column;gap:3px;padding:10px 0}
+.ann .t{font-size:15px;font-weight:600}.ann .b{font-size:14px;color:var(--ink-2)}
+.ann a{font-size:14px;font-weight:600;padding:11px 0;align-self:flex-start}
+
+/* Next practice / next competition */
+.next{flex-direction:row;gap:16px;align-items:flex-start}
+.date{flex:none;width:64px;border-radius:12px;background:var(--lilac);color:var(--purple-dark);text-align:center;padding:8px 0 10px;display:flex;flex-direction:column;line-height:1.1}
+.date small{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.date b{font-family:var(--display);font-size:26px;font-weight:700}
+.date.comp{background:var(--plum);color:#fff}
+.next .body{display:flex;flex-direction:column;gap:10px;min-width:0;flex:1}
+.next h2{font-size:20px}
+.slot{display:flex;flex-direction:column;gap:2px;padding-top:10px;border-top:1px solid var(--line-2)}
+.slot .line{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:14px;font-weight:600}
+.slot .where{font-size:13px;color:var(--ink-3)}
+
+/* Schedule rows */
+.rows{display:flex;flex-direction:column}
+.row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line-2)}
+.row:first-child{border-top:0}
+.row .when{flex:none;width:84px;white-space:nowrap;font-size:13px;font-weight:600;color:var(--purple);padding-top:1px}
+.row .emo{flex:none;width:24px;font-size:18px;line-height:1.2;text-align:center}
+.row .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .what{font-size:14px;font-weight:600;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.row .more{font-size:13px;color:var(--ink-2)}
+.row.big{background:var(--lilac);border-radius:12px;border-top:0;padding:12px;margin:6px 0}
+.row.big + .row{border-top:0}
+.row.big .when,.row.big .more{color:var(--purple-dark)}
+.row.big .chip{background:#fff}
+.tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--ink-2);white-space:nowrap}
+.tag.long{background:var(--warn-bg);color:var(--warn-2)}
+.month{font-family:var(--display);font-size:22px;font-weight:700;color:var(--plum);margin-top:8px}
+.month:first-child{margin-top:0}
+.month span{font-size:14px;font-weight:500;color:var(--ink-3);margin-left:8px}
+
+/* To-dos */
+.todo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:12px 14px;border-radius:10px;background:var(--warn-bg)}
+.todo .t{font-size:15px;font-weight:600}
+.todo .d{font-size:13px;color:var(--warn-2)}
+.todo .late{font-weight:600;color:var(--warn)}
+.todo>div{flex:1 1 180px;min-width:0}
+.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:10px;background:var(--purple);color:#fff;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}
+.btn:hover{background:var(--purple-dark);color:#fff}
+.list{display:flex;flex-direction:column;gap:8px}
+.checks{display:flex;flex-direction:column;gap:6px}.checks li{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--ink-2)}.checks svg{flex:none;margin-top:2px;color:var(--ok)}
+
+/* Dues */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.tile{padding:12px 14px;border-radius:10px;background:var(--soft);display:flex;flex-direction:column;gap:2px}
+.tile span{font-size:12px;color:var(--ink-3)}
+.tile b{font-family:var(--display);font-size:24px;font-weight:700;color:var(--plum)}
+.tile.warn{background:var(--warn-bg)}.tile.warn span{color:var(--warn-2)}.tile.warn b{color:var(--warn)}
+.tile.ok{background:var(--ok-bg)}.tile.ok span,.tile.ok b{color:var(--ok)}.tile.ok b{font-size:20px;line-height:1.3}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:500;color:var(--ink-3);padding:8px}
+td{padding:9px 8px;border-top:1px solid var(--line-2);vertical-align:top}
+th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{padding-right:0}
+.r{text-align:right}
+.st-paid{color:var(--ok);font-weight:600}.st-due{color:var(--warn);font-weight:600}.st-up{color:var(--ink-3)}
+.lock{display:inline-flex;align-items:center;gap:6px}
+.pay{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}.pay>span{flex:1 1 200px;min-width:0}
+.copy{font-family:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid #8F7CB3;background:#fff;color:var(--plum);cursor:pointer}
+
+/* Links */
+.linkgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 24px}
+.linkgroup{display:flex;flex-direction:column;gap:2px;min-width:0}
+.linkgroup h3{font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+.linkgroup a{display:flex;gap:10px;align-items:center;min-height:40px;font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;border-radius:8px}
+.linkgroup a:hover{color:var(--purple)}
+.linkgroup a span{flex:none;width:22px;text-align:center;font-size:16px}
+
+/* Page heads, filters, roster */
+.pagehead{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.pagehead h1{font-size:28px;color:var(--plum)}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;min-height:44px;padding:0 15px;border-radius:999px;background:var(--card);border:1px solid #8F7CB3;font-family:inherit;font-size:14px;font-weight:600;color:var(--plum);cursor:pointer}
+.pill:hover{border-color:var(--purple);color:var(--purple-dark)}
+.pill[aria-pressed="true"]{background:var(--plum);border-color:var(--plum);color:#fff}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:13px;font-weight:600;color:var(--ink-2)}
+.field input{font-family:inherit;font-size:16px;min-height:44px;width:260px;max-width:100%;padding:0 12px;border-radius:10px;border:1px solid #8F7CB3;background:#fff;color:var(--ink)}
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.person{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:flex-start;min-width:0}
+.avatar{flex:none;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:17px;font-weight:700;background:var(--lilac);color:var(--purple-dark)}
+.avatar.oa{background:var(--pink);color:var(--pink-text)}.avatar.coach{background:var(--plum);color:#fff}
+.person .info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.person .nm{font-size:15px;font-weight:600}
+.person a{font-size:13px;overflow-wrap:anywhere;padding:3px 0}
+footer.foot{font-size:12px;color:var(--ink-3);text-align:center}
+
+@media (max-width:760px){
+  .grid2,.anns{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:640px){
+  .hello h1{font-size:28px}
+  .who{flex:1 1 100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand span{display:block;margin-left:0}
+  .tabs a{padding:12px 10px}
+  .row .when{width:78px;white-space:nowrap}
+  .person a{padding:8px 0}
+  .date{width:56px}
+}
+@media (max-width:360px){
+  #duesCard th,#duesCard td{padding:8px 4px;font-size:13px}
+}
+@media (max-width:420px){
+  .tiles.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .tiles.three .tile{padding:10px}
+  .tiles.three .tile b{font-size:19px}
+}
+@media (prefers-reduced-motion:no-preference){.pill,.btn{transition:background-color .15s,border-color .15s,color .15s}}
+
+/* Sign-in, loading, admin bar */
+.center{max-width:440px;margin:40px auto 0;text-align:left}
+.center h1{font-size:26px;color:var(--plum)}
+.center form{display:flex;flex-direction:column;gap:12px}
+.center input{font-family:inherit;font-size:16px;min-height:48px;padding:0 12px;border-radius:10px;border:1px solid #8F7CB3;background:#fff;color:var(--ink);width:100%}
+.center label{font-size:14px;font-weight:600;color:var(--ink-2)}
+button.btn{font-family:inherit;border:0;cursor:pointer;justify-content:center;min-height:44px}
+.center button.btn{min-height:48px}
+button.btn[disabled]{opacity:.6;cursor:default}
+.err{color:#9B1C1C;font-size:14px}
+.signout{font-family:inherit;font-size:13px;font-weight:600;color:#fff;background:transparent;border:1px solid #7F5BB8;border-radius:10px;min-height:40px;padding:0 12px;cursor:pointer;flex:none}
+.whoRow{display:flex;gap:12px;align-items:center;min-width:0}
+.whoRow[hidden],.tabs[hidden]{display:none}
+.tabs button{font-family:inherit;background:transparent;border:0;border-bottom:3px solid transparent;color:var(--lilac-text);font-size:15px;font-weight:500;padding:12px 14px;min-height:44px;cursor:pointer}
+.tabs button[aria-current="page"]{color:#fff;font-weight:600;border-bottom-color:#C9A8FF}
+.adminbtn{font-family:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid #B98A3A;background:#fff;color:var(--warn-2);cursor:pointer}
+.adminctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.warns{flex:1 1 100%;font-size:13px}
+.warns summary{cursor:pointer;font-weight:600;padding:6px 0}
+.warns li{list-style:disc;margin-left:20px;padding:2px 0}
+.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.linkbtn{font:inherit;font-size:14px;font-weight:600;color:var(--purple);background:none;border:0;padding:11px 0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+.status button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+@media (max-width:640px){.tabs button{padding:12px 10px}.whoRow{flex:1 1 100%;justify-content:space-between}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-row">
+    <div class="brand"><b>Team Tenacity</b><span id="season"></span></div>
+    <div class="whoRow" id="whoRow" hidden><span class="who" id="who"></span><button type="button" class="signout" id="signOut">Sign out</button></div>
+  </div>
+  <nav class="wrap tabs" id="tabs" aria-label="Sections" hidden>
+    <button type="button" data-tab="home">Home</button>
+    <button type="button" data-tab="schedule">Schedule</button>
+    <button type="button" data-tab="roster">Roster</button>
+  </nav>
+</header>
+<div class="preview" id="adminBar" hidden><div class="wrap">
+  <span id="adminText"></span>
+  <span class="adminctl"><label for="viewAs">View as </label><select id="viewAs"></select><button type="button" class="adminbtn" id="refresh">Refresh data</button></span>
+  <details class="warns" id="warns" hidden><summary id="warnsSum"></summary><ul id="warnsList"></ul></details>
+</div></div>
+
+<main class="wrap">
+  <section class="view" id="view-auth">
+    <div class="card center" id="authCard"><p class="meta">Loading your dashboard…</p></div>
+  </section>
+
+  <section class="view home" id="view-home" hidden>
+    <div class="hello">
+      <div><h1 id="hi"></h1><div class="chips" id="myTeams"></div></div>
+      <p class="status" id="statusLine"></p>
+    </div>
+    <div class="card" id="annCard"></div>
+    <div id="urgent"></div>
+    <div class="grid2" id="nextUp" style="align-items:stretch"></div>
+    <div class="grid2">
+      <div class="col" id="colA">
+        <div class="card" id="todosCard"></div>
+        <div class="card" id="duesCard"></div>
+      </div>
+      <div class="col">
+        <div class="card" id="comingCard"></div>
+        <div class="card" id="linksCard"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-schedule" hidden>
+    <div class="pagehead"><div><h1>Schedule</h1><p class="meta" id="schedSub"></p></div></div>
+    <div class="pills" id="schedFilters" role="group" aria-label="Filter the schedule"></div>
+    <div class="card" id="schedList"></div>
+  </section>
+
+  <section class="view" id="view-roster" hidden>
+    <div class="pagehead">
+      <div><h1>Team roster</h1><p class="meta" id="rosterCount"></p></div>
+      <div class="field"><label for="rosterSearch">Search by name</label><input id="rosterSearch" type="search" placeholder="Type a name" autocomplete="off"></div>
+    </div>
+    <div class="pills" id="rosterFilters" role="group" aria-label="Filter the roster"></div>
+    <ul class="people" id="rosterBody"></ul>
+    <p class="empty" id="rosterEmpty" hidden>No one matches that search.</p>
+  </section>
+  <footer class="foot" id="foot"></footer>
+</main>
+
+<script>var BOOT = {code: (new URLSearchParams(location.search).get('t') || ''), api: 'https://script.google.com/macros/s/AKfycbwZgUdPbuS7WhqbX1zecLygtK0YOxjUonEMb7kmizhkH82qvlCbKqu4RqyS50Dqtkdy/exec'};</script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function safeUrl(u){ return /^(https?:|mailto:|tel:)/i.test(u || '') ? u : '#'; }
+  var EXT = ' target="_blank" rel="noopener"';
+  function d(s){ var p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var now = new Date(); var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  function days(a, b){ return Math.round((b - a) / 86400000); }
+  function md(s){ var x = d(s); return MON[x.getMonth()] + ' ' + x.getDate(); }
+  function wmd(s){ var x = d(s); return DOW[x.getDay()] + ' ' + MON[x.getMonth()] + ' ' + x.getDate(); }
+  function range(e){
+    if(!e.end) return wmd(e.start);
+    var a = d(e.start), b = d(e.end);
+    return a.getMonth() === b.getMonth() ? MON[a.getMonth()] + ' ' + a.getDate() + '–' + b.getDate() : md(e.start) + ' – ' + md(e.end);
+  }
+  function money(n){ return '$' + Number(n).toLocaleString('en-US'); }
+  function endOf(e){ return d(e.end || e.start); }
+  function rel(n){ return n <= 0 ? 'today' : n === 1 ? 'tomorrow' : 'in ' + n + ' days'; }
+  function dateTile(s, cls){ var x = d(s); return '<div class="date' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><small>' + DOW[x.getDay()] + '</small><b>' + x.getDate() + '</b><small>' + MON[x.getMonth()] + '</small></div>'; }
+  var CHECK = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.2 3L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function teamChip(team){ return '<span class="chip' + (team === 'Open Adult' ? ' oa' : '') + '">' + esc(team) + '</span>'; }
+  function teamChips(adult, oa){
+    var out = '';
+    if(adult) out += adult === 'Coach' ? '<span class="chip coach">Adult coach</span>' : teamChip('Adult');
+    if(oa) out += oa === 'Coach' ? '<span class="chip coach">Open Adult coach</span>' : teamChip('Open Adult');
+    return out;
+  }
+  function emoji(e){
+    var t = e.title || '';
+    if(e.type === 'Competition') return '🏆';
+    if(/holiday/i.test(t)) return '🎄';
+    if(/psycher/i.test(t)) return '🎁';
+    if(/celebration/i.test(t)) return '🎉';
+    if(/family/i.test(t)) return '💜';
+    if(e.type === 'Social') return '🥂';
+    if(e.type === 'Team') return '✨';
+    return '⛸️';
+  }
+  function linkEmoji(l){
+    var t = l.label.toLowerCase();
+    return /video/.test(t) ? '🎬' : /calendar/.test(t) ? '📅' : /folder/.test(t) ? '📁' : /step/.test(t) ? '👣' : /plan/.test(t) ? '📝' : /bssc|nesso|eastern|schedule/.test(t) ? '🏆' : /slack/.test(t) ? '💬' : /partiful|social/.test(t) ? '🥂' : /website/.test(t) ? '🌐' : '🔗';
+  }
+  function splitTitle(t){ var m = /^(.*?)\s*\((longer)\)$/i.exec(t); return m ? {title: m[1], longer: true} : {title: t, longer: false}; }
+  function schedRow(e){
+    var st = splitTitle(e.title);
+    var title = e.url ? '<a href="' + esc(safeUrl(e.url)) + '"' + EXT + '>' + esc(st.title) + '</a>' : esc(st.title);
+    var chip = e.team && e.team !== 'Both' ? teamChip(e.team) : '';
+    return '<div class="row' + (e.type === 'Competition' ? ' big' : '') + '"><span class="when">' + esc(range(e)) + '</span><span class="emo" aria-hidden="true">' + emoji(e) + '</span><span class="txt"><span class="what">' + title + chip + (st.longer ? '<span class="tag long">Longer</span>' : '') + '</span><span class="more">' + esc(e.details || '') + (e.location ? ' · ' + esc(e.location) : '') + '</span></span></div>';
+  }
+
+  // ---------- talking to the server ----------
+  var KEY = 'tt_session', token = '';
+  try { token = localStorage.getItem(KEY) || ''; } catch(e){}
+  function call(name, args){
+    return new Promise(function(resolve, reject){
+      if(window.MOCK) return setTimeout(function(){ resolve(window.MOCK(name, args)); }, 50);
+      if(BOOT.api){
+        fetch(BOOT.api + '?api=' + encodeURIComponent(name) + '&args=' + encodeURIComponent(JSON.stringify(args)), {credentials: 'omit', redirect: 'follow'})
+          .then(function(r){ return r.json(); })
+          .then(function(o){ if(o && o.ok) resolve(o.result); else reject(new Error((o && o.error) || 'Request failed')); }, reject);
+        return;
+      }
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).api(name, args);
+    });
+  }
+  var D = null, viewAs = '', tab = 'home', schedType = 'All', rosterTeam = 'All', photos = null;
+
+  function show(which){
+    ['auth','home','schedule','roster'].forEach(function(t){ $('view-' + t).hidden = t !== which; });
+    var signedIn = which !== 'auth';
+    $('tabs').hidden = !signedIn; $('whoRow').hidden = !signedIn;
+    if(!signedIn) $('adminBar').hidden = true;
+    Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function(b){ if(b.getAttribute('data-tab') === which) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  }
+  function go(t, anchor){
+    tab = t; show(t);
+    var el = anchor && $(anchor);
+    if(el) el.scrollIntoView(); else window.scrollTo(0, 0);
+  }
+  $('tabs').addEventListener('click', function(ev){ var b = ev.target.closest('button'); if(b) go(b.getAttribute('data-tab')); });
+  document.addEventListener('click', function(ev){
+    var g = ev.target.closest('[data-go]');
+    if(g){ ev.preventDefault(); var p = g.getAttribute('data-go').split('#'); go(p[0], p[1]); }
+  });
+
+  function signInForm(msg){
+    $('authCard').innerHTML = '<h1>Sign in</h1><p class="meta">Enter the email address the team has for you. We’ll send you a link that signs you in.</p>' +
+      (msg ? '<p class="err">' + esc(msg) + '</p>' : '') +
+      '<form id="loginForm"><label for="email">Email address</label><input id="email" type="email" autocomplete="email" required><button class="btn" type="submit" id="send">Email me a sign-in link</button></form>';
+    $('loginForm').addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var em = $('email').value.trim(); if(!em) return;
+      $('send').disabled = true; $('send').textContent = 'Sending…';
+      call('requestLink', [em]).then(function(){
+        $('authCard').innerHTML = '<h1>Check your email</h1><p>If <b>' + esc(em) + '</b> is on the team list, a sign-in link is on its way. It works once and expires in 15 minutes.</p><p class="meta">Nothing after a few minutes? Check spam, or try the other email address you use for the team.</p><button type="button" class="linkbtn" id="again">Use a different email</button>';
+        $('again').addEventListener('click', function(){ signInForm(''); });
+      }, function(){ signInForm('That didn’t work. Please try again in a minute.'); });
+    });
+    show('auth');
+  }
+  function fail(){ $('authCard').innerHTML = '<h1>Something went wrong</h1><p>The dashboard couldn’t load. Please reload the page. If it keeps happening, email the board.</p>'; show('auth'); }
+
+  function load(refresh){
+    return call('getDashboard', [token, viewAs, !!refresh]).then(function(res){
+      if(!res || !res.auth){ token = ''; try { localStorage.removeItem(KEY); } catch(e){} signInForm(''); return; }
+      D = res; render(); show(tab);
+      if(photos === null){ photos = {}; call('getPhotos', [token]).then(function(p){ photos = p || {}; drawRoster(); }, function(){}); }
+    }, fail);
+  }
+  $('signOut').addEventListener('click', function(){
+    var t = token; token = ''; D = null; viewAs = ''; photos = null;
+    try { localStorage.removeItem(KEY); } catch(e){}
+    call('signOut', [t]).then(function(){}, function(){});
+    signInForm('');
+  });
+  $('viewAs').addEventListener('change', function(){ viewAs = $('viewAs').value; $('adminText').textContent = 'Loading…'; load(false); });
+  $('refresh').addEventListener('click', function(){ $('refresh').disabled = true; $('refresh').textContent = 'Refreshing…'; load(true).then(function(){ $('refresh').disabled = false; $('refresh').textContent = 'Refresh data'; }); });
+
+  // ---------- drawing ----------
+  function render(){
+    var me = D.me, u = D.dues;
+    $('season').textContent = D.season ? D.season + ' season' : '';
+    $('who').textContent = D.viewer.email;
+    $('foot').innerHTML = 'Updated ' + esc(D.at) + ' · Questions? Email <a href="mailto:' + esc(D.settings.contact) + '"' + EXT + '>' + esc(D.settings.contact) + '</a>';
+
+    // Admin bar
+    if(D.viewer.admin && D.people){
+      $('adminBar').hidden = false;
+      $('adminText').textContent = me.name === D.viewer.name ? 'Admin: you can view the dashboard as anyone.' : 'You are viewing ' + me.name + '’s dashboard.';
+      $('viewAs').innerHTML = D.people.map(function(n){ return '<option value="' + esc(n) + '"' + (n === me.name ? ' selected' : '') + '>' + esc(n) + (n === D.viewer.name ? ' (you)' : '') + '</option>'; }).join('');
+      var w = D.warnings || [];
+      $('warns').hidden = !w.length;
+      $('warnsSum').textContent = w.length + (w.length === 1 ? ' thing' : ' things') + ' to check in the data';
+      $('warnsList').innerHTML = w.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('');
+    } else $('adminBar').hidden = true;
+
+    $('hi').textContent = 'Hi, ' + me.first;
+    $('myTeams').innerHTML = teamChips(me.adult, me.openAdult);
+    var upcoming = D.schedule.filter(function(e){ return endOf(e) >= today; }).sort(function(a, b){ return d(a.start) - d(b.start); });
+    D.upcoming = upcoming;
+
+    // To-dos: the server's list, plus anything overdue or unpaid
+    var todos = [];
+    if(u && u.overdue > 0) todos.push({title: 'Pay overdue dues', details: money(u.overdue) + ' is overdue.', button: 'How to pay', go: 'home#dues', status: 'To do'});
+    if(u) u.gear.forEach(function(g){ if(g.status !== 'Paid') todos.push({title: 'Pay for ' + g.item.toLowerCase(), details: money(g.amount), button: 'How to pay', go: 'home#dues', status: 'To do'}); });
+    todos = todos.concat(D.todos);
+    var open = todos.filter(function(t){ return t.status !== 'Done'; }), doneList = todos.filter(function(t){ return t.status === 'Done'; });
+    $('statusLine').innerHTML = open.length
+      ? '<button type="button" data-go="home#todos">You have <b class="count">' + open.length + (open.length === 1 ? ' thing' : ' things') + ' to do</b>.</button>'
+      : '<b class="clear">You’re all caught up.</b> Nothing is waiting on you.';
+
+    // Announcements
+    var anns = D.announcements.slice().sort(function(a, b){ return (b.posted || '') < (a.posted || '') ? -1 : 1; });
+    $('annCard').innerHTML = '<h2>Announcements</h2>' + (anns.length ? '<div class="anns">' + anns.map(function(a){
+      return '<div class="ann"><span class="t">' + esc(a.title) + '</span><span class="b">' + esc(a.body) + '</span>' + (a.linkUrl ? '<a href="' + esc(safeUrl(a.linkUrl)) + '"' + EXT + '>' + esc(a.linkLabel || 'Open') + '</a>' : '') + '</div>';
+    }).join('') + '</div>' : '<p class="empty">No announcements right now.</p>');
+
+    // Next practice and next competition
+    var html = '', prac = upcoming.filter(function(e){ return e.type === 'Practice'; });
+    if(prac.length){
+      var day = prac[0].start, same = prac.filter(function(e){ return e.start === day; });
+      var titles = [], longer = false;
+      same.forEach(function(e){ var st = splitTitle(e.title); if(titles.indexOf(st.title) < 0) titles.push(st.title); longer = longer || st.longer; });
+      html += '<div class="card next">' + dateTile(day) + '<div class="body"><span class="eyebrow">Next practice · ' + rel(days(today, d(day))) + '</span><h2>' + esc(titles.join(' / ')) + (longer ? ' <span class="tag long">Longer</span>' : '') + '</h2>' +
+        same.map(function(e){ return '<div class="slot"><div class="line">' + (e.team !== 'Both' ? teamChip(e.team) : '') + '<span>' + esc(e.details || '') + '</span></div><span class="where">' + esc(e.location || '') + '</span></div>'; }).join('') + '</div></div>';
+    }
+    var comp = upcoming.filter(function(e){ return e.type === 'Competition'; })[0];
+    if(comp){
+      var n2 = days(today, d(comp.start));
+      var room = comp.room ? '<p class="note">🛏️ <b>Your room:</b> Room ' + esc(comp.room.room) + (comp.room['with'].length ? ' with ' + esc(comp.room['with'].join(', ')) : ' (single)') + '</p>' : '';
+      html += '<div class="card next">' + dateTile(comp.start, 'comp') + '<div class="body"><span class="eyebrow">Next competition · ' + (n2 > 0 ? rel(n2) : 'happening now') + '</span><h2>' + esc(comp.title) + '</h2>' +
+        '<p class="meta">' + esc(range(comp)) + (comp.location ? ' · ' + esc(comp.location) : '') + '</p><p>' + esc(comp.details || '') + '</p>' + room +
+        (comp.url ? '<a class="cardlink" href="' + esc(safeUrl(comp.url)) + '"' + EXT + '>Team schedule, hotel and packing list</a>' : '') + '</div></div>';
+    }
+    $('nextUp').innerHTML = html;
+
+    // To-dos card
+    function item(t){
+      var late = t.due && d(t.due) < today;
+      var due = t.due ? (late ? '<span class="late">Was due ' + esc(md(t.due)) + '</span>' : 'Due ' + esc(md(t.due))) : '';
+      var sub = [due, esc(t.details || '')].filter(Boolean).join(' · ');
+      var btn = t.go ? '<button type="button" class="btn" data-go="' + esc(t.go) + '">' + esc(t.button) + '</button>' : (t.url ? '<a class="btn" href="' + esc(safeUrl(t.url)) + '"' + EXT + '>' + esc(t.button || 'Open') + '</a>' : '');
+      return '<li class="todo"><div><div class="t">' + esc(t.title) + '</div>' + (sub ? '<div class="d">' + sub + '</div>' : '') + '</div>' + btn + '</li>';
+    }
+    var tc = $('todosCard');
+    tc.innerHTML = '<div class="head"><h2 id="todos">Your to-dos</h2><span class="meta">' + open.length + ' open · ' + doneList.length + ' done</span></div>' +
+      (open.length ? '<ul class="list">' + open.map(item).join('') + '</ul>' : (doneList.length ? '' : '<p class="empty">Nothing to do right now.</p>')) +
+      (doneList.length ? '<ul class="checks">' + doneList.map(function(t){ return '<li>' + CHECK + '<span>' + esc(t.title) + '</span></li>'; }).join('') + '</ul>' : '');
+    if(open.length) $('urgent').appendChild(tc); else $('colA').insertBefore(tc, $('colA').firstChild);
+
+    // Dues card
+    var el = $('duesCard');
+    var lock = '<span class="meta lock"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2.5" y="6" width="9" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 6V4.2a2.5 2.5 0 015 0V6" stroke="currentColor" stroke-width="1.5"/></svg>Only you and the board can see this</span>';
+    var mail = '<a href="mailto:' + esc(D.settings.contact) + '"' + EXT + '>' + esc(D.settings.contact) + '</a>';
+    el.hidden = !u;
+    if(u){
+      var next = u.payments.filter(function(p){ return p.status === 'Upcoming'; })[0];
+      var firstLate = u.payments.filter(function(p){ return p.status === 'Overdue'; })[0];
+      var gearDue = u.gear.filter(function(g){ return g.status !== 'Paid'; }).reduce(function(a, g){ return a + g.amount; }, 0);
+      var tiles = '';
+      if(u.balance <= 0){
+        tiles = '<div class="tile ok"><span>Status</span><b>' + (u.balance < 0 ? 'Paid, with ' + money(-u.balance) + ' credit' : 'Paid in full') + '</b></div><div class="tile"><span>Paid this season</span><b class="num">' + money(u.paid) + '</b></div>';
+      } else {
+        tiles = (u.overdue > 0 ? '<div class="tile warn"><span>Overdue' + (firstLate ? ' since ' + esc(md(firstLate.due)) : '') + '</span><b class="num">' + money(u.overdue) + '</b></div>' : '<div class="tile ok"><span>Status</span><b>On track</b></div>') +
+          '<div class="tile"><span>Left this season</span><b class="num">' + money(u.balance) + '</b></div>' +
+          (next ? '<div class="tile"><span>Next due</span><b>' + esc(md(next.due)) + '</b></div>' : '');
+      }
+      var rows = u.payments.map(function(p){
+        var cls = p.status === 'Paid' ? 'st-paid' : p.status === 'Upcoming' ? 'st-up' : 'st-due';
+        var amt = money(p.amount) + (p.paidSoFar ? '<br><span class="meta">' + money(p.paidSoFar) + ' paid</span>' : '');
+        return '<tr><td>' + esc(p.label) + '</td><td style="white-space:nowrap">' + esc(md(p.due)) + '</td><td class="r num">' + amt + '</td><td class="r ' + cls + '">' + esc(p.status) + '</td></tr>';
+      }).join('');
+      var gear = u.gear.map(function(g){ return '<tr><td>' + esc(g.item) + '</td><td>—</td><td class="r num">' + money(g.amount) + '</td><td class="r ' + (g.status === 'Paid' ? 'st-paid' : 'st-due') + '">' + esc(g.status) + '</td></tr>'; }).join('');
+      var sum = u.seasonTotal ? 'Season total ' + money(u.seasonTotal) + (u.discount ? ', less a ' + money(u.discount) + ' upfront discount' : '') + (u.plan ? ' · ' + esc(u.plan) + ' plan' : '') : '';
+      var owes = u.balance > 0 || gearDue > 0;
+      el.innerHTML = '<div class="head"><h2 id="dues">Your dues</h2>' + lock + '</div>' + (u.payments.length ? '<div class="tiles' + (u.balance > 0 && next ? ' three' : '') + '">' + tiles + '</div>' : '') +
+        '<div class="scroll"><table><thead><tr><th>Payment</th><th>Due</th><th class="r">Amount</th><th class="r">Status</th></tr></thead><tbody>' + rows + gear + '</tbody></table></div>' +
+        (sum ? '<p class="meta">' + sum + '</p>' : '') +
+        (owes ? '<div class="note pay"><span>Pay by Zelle to <b>' + esc(D.settings.zelle) + '</b></span><button type="button" class="copy" id="copyZelle">Copy address</button></div><p class="meta">For another method or a payment plan, email the board at ' + mail + '.</p>' : '<p class="note">Something look wrong? Email the board at ' + mail + '.</p>');
+      var cb = $('copyZelle');
+      if(cb) cb.addEventListener('click', function(){
+        try { navigator.clipboard.writeText(D.settings.zelle).then(function(){ cb.textContent = 'Copied'; }, function(){ cb.textContent = 'Select the address to copy'; }); }
+        catch(e){ cb.textContent = 'Select the address to copy'; }
+      });
+    }
+
+    // Coming up: one row per practice day; skips what the two cards above already show
+    var firstPrac = prac[0];
+    var rest = upcoming.filter(function(e){ return e !== comp && !(firstPrac && e.type === 'Practice' && e.start === firstPrac.start); });
+    var rws = [], byDay = {};
+    rest.forEach(function(e){
+      if(e.type !== 'Practice'){ rws.push(e); return; }
+      if(!byDay[e.start]){ byDay[e.start] = {start: e.start, type: 'Practice', parts: [], titles: []}; rws.push(byDay[e.start]); }
+      var g = byDay[e.start], st = splitTitle(e.title), on = /On-ice (\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2}\s*[AP]M)/i.exec(e.details || ''), off = /Off-ice (\d{1,2}:\d{2})/i.exec(e.details || '');
+      if(g.titles.indexOf(st.title) < 0) g.titles.push(st.title);
+      g.parts.push((me.adult && me.openAdult ? e.team + ' ' : '') + (on && off ? off[1] + '–' + on[2] + ' (on-ice ' + on[1] + (st.longer ? ', longer' : '') + ')' : (e.details || '')));
+    });
+    var list = rws.slice(0, D.settings.upcomingCount || 5).map(function(r){ return r.parts ? {start: r.start, type: 'Practice', team: 'Both', title: r.titles.join(' / '), details: r.parts.join(' · ')} : r; });
+    $('comingCard').innerHTML = '<h2>Coming up</h2>' + (list.length ? '<div class="rows">' + list.map(function(e){
+      return '<div class="row"><span class="when">' + esc(range(e)) + '</span><span class="emo" aria-hidden="true">' + emoji(e) + '</span><span class="txt"><span class="what">' + esc(splitTitle(e.title).title) + '</span><span class="more">' + esc(e.details || '') + '</span></span></div>';
+    }).join('') + '</div>' : '<p class="empty">Nothing else on the schedule yet.</p>') + '<button type="button" class="linkbtn" data-go="schedule">See the full schedule</button>';
+
+    // Links, grouped by team
+    var groups = [['Adult', 'Adult'], ['Open Adult', 'Open Adult'], ['Both', 'Whole team']];
+    var lg = groups.map(function(g){
+      var ls = D.links.filter(function(l){ return l.url && l.team === g[0]; });
+      return ls.length ? '<div class="linkgroup"><h3>' + g[1] + '</h3>' + ls.map(function(l){ return '<a href="' + esc(safeUrl(l.url)) + '"' + EXT + '><span aria-hidden="true">' + linkEmoji(l) + '</span>' + esc(l.label.replace(/^(Adult|Open Adult) /, '').replace(/^./, function(c){ return c.toUpperCase(); })) + '</a>'; }).join('') + '</div>' : '';
+    }).join('');
+    $('linksCard').hidden = !lg;
+    $('linksCard').innerHTML = '<h2>Links</h2><div class="linkgroups">' + lg + '</div>';
+
+    $('schedSub').textContent = 'Everything coming up for ' + [me.adult ? 'Adult' : '', me.openAdult ? 'Open Adult' : ''].filter(Boolean).join(' and ') + '.';
+    drawSchedule(); drawRoster();
+  }
+
+  function press(box, attr, val){ Array.prototype.forEach.call(box.querySelectorAll('button'), function(b){ b.setAttribute('aria-pressed', String(b.getAttribute(attr) === val)); }); }
+  $('schedFilters').innerHTML = [['All','Everything'],['Practice','⛸️ Practices'],['Competition','🏆 Competitions'],['Team','🎉 Team events']].map(function(o){ return '<button type="button" class="pill" data-type="' + o[0] + '">' + o[1] + '</button>'; }).join('');
+  function drawSchedule(){
+    press($('schedFilters'), 'data-type', schedType);
+    var list = ((D && D.upcoming) || []).filter(function(e){ return schedType === 'All' || e.type === schedType || (schedType === 'Team' && e.type === 'Social'); });
+    var html = '', last = '';
+    list.forEach(function(e){
+      var x = d(e.start), key = MONTHS[x.getMonth()];
+      if(key !== last){ html += (last ? '</div>' : '') + '<h2 class="month">' + key + '<span>' + x.getFullYear() + '</span></h2><div class="rows">'; last = key; }
+      html += schedRow(e);
+    });
+    $('schedList').innerHTML = list.length ? html + '</div>' : '<p class="empty">Nothing of that kind is scheduled.</p>';
+  }
+  $('schedFilters').addEventListener('click', function(ev){ var b = ev.target.closest('button'); if(b){ schedType = b.getAttribute('data-type'); drawSchedule(); } });
+
+  $('rosterFilters').innerHTML = [['All','Everyone'],['Adult','Adult'],['Open Adult','Open Adult'],['Coach','Coaches']].map(function(o){ return '<button type="button" class="pill" data-team="' + o[0] + '">' + o[1] + '</button>'; }).join('');
+  function drawRoster(){
+    if(!D) return;
+    press($('rosterFilters'), 'data-team', rosterTeam);
+    var q = $('rosterSearch').value.trim().toLowerCase();
+    var list = D.roster.filter(function(p){
+      if(q && p.name.toLowerCase().indexOf(q) < 0) return false;
+      if(rosterTeam === 'Adult') return !!p.adult;
+      if(rosterTeam === 'Open Adult') return !!p.oa;
+      if(rosterTeam === 'Coach') return p.adult === 'Coach' || p.oa === 'Coach';
+      return true;
+    });
+    $('rosterBody').innerHTML = list.map(function(p){
+      var parts = p.name.split(' '), ini = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      var cls = p.adult === 'Coach' ? ' coach' : (!p.adult && p.oa ? ' oa' : '');
+      var pic = photos && photos[p.name] ? '<img alt="" src="' + esc(photos[p.name]) + '">' : esc(ini);
+      var tel = p.phone ? '<a class="num" href="tel:+1' + p.phone.replace(/\D/g, '') + '"' + EXT + '>' + esc(p.phone) + '</a>' : '';
+      return '<li class="person"><div class="avatar' + cls + '" aria-hidden="true">' + pic + '</div><div class="info"><span class="nm">' + esc(p.name) + '</span><div class="chips">' + teamChips(p.adult, p.oa) + '</div>' + tel + (p.email ? '<a href="mailto:' + esc(p.email) + '"' + EXT + '>' + esc(p.email).replace('@', '<wbr>@') + '</a>' : '') + '</div></li>';
+    }).join('');
+    $('rosterEmpty').hidden = list.length > 0;
+    $('rosterCount').textContent = list.length + (list.length === 1 ? ' person' : ' people') + ' · visible to signed-in team members only';
+  }
+  $('rosterFilters').addEventListener('click', function(ev){ var b = ev.target.closest('button'); if(b){ rosterTeam = b.getAttribute('data-team'); drawRoster(); } });
+  $('rosterSearch').addEventListener('input', drawRoster);
+
+  // ---------- start ----------
+  if(BOOT && BOOT.code){
+    try { if(BOOT.api) history.replaceState(null, '', location.pathname); } catch(e){}
+    call('redeem', [BOOT.code]).then(function(r){
+      if(r && r.ok){ token = r.token; try { localStorage.setItem(KEY, token); } catch(e){} load(false); }
+      else if(token) load(false);
+      else signInForm('That sign-in link has expired or was already used. Enter your email for a new one.');
+    }, fail);
+  } else if(token) load(false);
+  else signInForm('');
+})();
+
+</script>
+</body>
+</html>
