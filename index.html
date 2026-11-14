@@ -134,10 +134,10 @@ th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{padding
 .copy{font-family:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid #8F7CB3;background:#fff;color:var(--plum);cursor:pointer}
 
 /* Links */
-.linkgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 24px}
-.linkgroup{display:flex;flex-direction:column;gap:2px;min-width:0}
-.linkgroup h3{font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
-.linkgroup a{display:flex;gap:10px;align-items:center;min-height:40px;font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;border-radius:8px}
+.linkgroups{display:flex;flex-direction:column;gap:6px}
+.linkgroup{display:flex;flex-wrap:wrap;align-items:center;gap:0 24px;min-width:0}
+.linkgroup h3{font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);flex:none;width:104px}
+.linkgroup a{display:flex;gap:8px;align-items:center;min-height:40px;font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;border-radius:8px}
 .linkgroup a:hover{color:var(--purple)}
 .linkgroup a span{flex:none;width:22px;text-align:center;font-size:16px}
 
@@ -170,6 +170,8 @@ footer.foot{font-size:12px;color:var(--ink-3);text-align:center}
   .tabs a{padding:12px 10px}
   .row .when{width:78px;white-space:nowrap}
   .person a{padding:8px 0}
+  .linkgroup h3{width:100%;margin-top:6px}
+  .linkgroup a{flex:1 1 40%}
   .date{width:56px}
 }
 @media (max-width:360px){
@@ -246,9 +248,9 @@ button.btn[disabled]{opacity:.6;cursor:default}
       </div>
       <div class="col">
         <div class="card" id="comingCard"></div>
-        <div class="card" id="linksCard"></div>
       </div>
     </div>
+    <div class="card" id="linksCard"></div>
   </section>
 
   <section class="view" id="view-schedule" hidden>
@@ -314,7 +316,7 @@ button.btn[disabled]{opacity:.6;cursor:default}
   }
   function linkEmoji(l){
     var t = l.label.toLowerCase();
-    return /video/.test(t) ? '🎬' : /calendar/.test(t) ? '📅' : /folder/.test(t) ? '📁' : /step/.test(t) ? '👣' : /plan/.test(t) ? '📝' : /bssc|nesso|eastern|schedule/.test(t) ? '🏆' : /slack/.test(t) ? '💬' : /partiful|social/.test(t) ? '🥂' : /website/.test(t) ? '🌐' : '🔗';
+    return /video/.test(t) ? '🎬' : /calendar/.test(t) ? '📅' : /folder/.test(t) ? '📁' : /step/.test(t) ? '⛸️' : /plan/.test(t) ? '📝' : /bssc|nesso|eastern|schedule/.test(t) ? '🏆' : /slack/.test(t) ? '💬' : /partiful|social/.test(t) ? '🥂' : /website/.test(t) ? '🌐' : '🔗';
   }
   function splitTitle(t){ var m = /^(.*?)\s*\((longer)\)$/i.exec(t); return m ? {title: m[1], longer: true} : {title: t, longer: false}; }
   function schedRow(e){
