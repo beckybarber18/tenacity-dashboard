@@ -593,14 +593,18 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
     }
     img.onload = place; if(img.complete && img.naturalWidth) place();
   }
-  var zoomFrom = null;
+  var zoomFrom = null, big = {};
   function closeZoom(){ $('zoom').hidden = true; if(zoomFrom && document.contains(zoomFrom)) zoomFrom.focus(); zoomFrom = null; }
   $('rosterBody').addEventListener('click', function(ev){
     var b = ev.target.closest('button[data-photo]'); if(!b || !photos) return;
     var n = b.getAttribute('data-photo'); if(!photos[n]) return;
     zoomFrom = b; var zi = $('zoomImg'), src = b.querySelector('img'), fo = src && src.getAttribute('data-focus');
+    // The enlarged view shows a wider crop than the small circle, and loads a sharper copy of the photo.
+    if(fo){ var f = fo.split(' ').map(Number); fo = [f[0], f[1], Math.min(1, f[2] * 1.5)].join(' '); }
     zi.onload = null; zi.style.cssText = ''; zi.removeAttribute('data-focus'); zi.src = photos[n];
     if(fo){ zi.setAttribute('data-focus', fo); focusImg(zi); }
+    if(!big[n]) big[n] = call('getPhoto', [token, n]);
+    big[n].then(function(u){ if(u && zoomFrom === b && !$('zoom').hidden) zi.src = u; }, function(){ delete big[n]; });
     $('zoomName').textContent = n; $('zoom').hidden = false; $('zoomClose').focus();
   });
   $('zoom').addEventListener('click', closeZoom);
