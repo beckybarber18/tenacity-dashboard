@@ -392,6 +392,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
   function load(refresh){
     return call('getDashboard', [token, viewAs, !!refresh]).then(function(res){
       if(!res || !res.auth){ token = ''; try { localStorage.removeItem(KEY); } catch(e){} signInForm(''); return; }
+      if(refresh){ photos = null; big = {}; } // photos and their crops change together, so reload both
       D = res; render(); show(tab);
       if(photos === null){ photos = {}; call('getPhotos', [token]).then(function(p){ photos = p || {}; drawRoster(); }, function(){}); }
     }, fail);
