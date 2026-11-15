@@ -485,7 +485,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
       var gearDue = u.gear.filter(function(g){ return g.status !== 'Paid'; }).reduce(function(a, g){ return a + g.amount; }, 0);
       var tiles = '';
       if(u.balance <= 0){
-        tiles = '<div class="tile ok"><span>Status</span><b>' + (u.balance < 0 ? 'Paid, with ' + money(-u.balance) + ' credit' : 'Paid in full') + '</b></div><div class="tile"><span>Paid this season</span><b class="num">' + money(u.paid) + '</b></div>';
+        tiles = (gearDue > 0 ? '<div class="tile warn"><span>Owed for gear</span><b class="num">' + money(gearDue) + '</b></div>' : '') + '<div class="tile ok"><span>' + (gearDue > 0 ? 'Dues' : 'Status') + '</span><b>' + (u.balance < 0 ? 'Paid, with ' + money(-u.balance) + ' credit' : 'Paid in full') + '</b></div><div class="tile"><span>Paid this season</span><b class="num">' + money(u.paid) + '</b></div>';
       } else {
         tiles = (u.overdue > 0 ? '<div class="tile warn"><span>Overdue' + (firstLate ? ' since ' + esc(md(firstLate.due)) : '') + '</span><b class="num">' + money(u.overdue) + '</b></div>' : '<div class="tile ok"><span>Status</span><b>On track</b></div>') +
           '<div class="tile"><span>Left this season</span><b class="num">' + money(u.balance) + '</b></div>' +
@@ -499,7 +499,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
       var gear = u.gear.map(function(g){ return '<tr><td>' + esc(g.item) + '</td><td>—</td><td class="r num">' + money(g.amount) + '</td><td class="r ' + (g.status === 'Paid' ? 'st-paid' : 'st-due') + '">' + esc(g.status) + '</td></tr>'; }).join('');
       var sum = u.seasonTotal ? 'Season total ' + money(u.seasonTotal) + (u.discount ? ', less a ' + money(u.discount) + ' upfront discount' : '') + (u.plan ? ' · ' + esc(u.plan) + ' plan' : '') : '';
       var owes = u.balance > 0 || gearDue > 0;
-      el.innerHTML = '<div class="head"><h2 id="dues">Your dues</h2>' + lock + '</div>' + (u.payments.length ? '<div class="tiles' + (u.balance > 0 && next ? ' three' : '') + '">' + tiles + '</div>' : '') +
+      el.innerHTML = '<div class="head"><h2 id="dues">Your dues</h2>' + lock + '</div>' + (u.payments.length ? '<div class="tiles' + ((u.balance > 0 && next) || (u.balance <= 0 && gearDue > 0) ? ' three' : '') + '">' + tiles + '</div>' : '') +
         '<div class="scroll"><table><thead><tr><th>Payment</th><th>Due</th><th class="r">Amount</th><th class="r">Status</th></tr></thead><tbody>' + rows + gear + '</tbody></table></div>' +
         (sum ? '<p class="meta">' + sum + '</p>' : '') +
         (owes ? '<div class="note pay"><span>Pay by Zelle to <b>' + esc(D.settings.zelle) + '</b></span><button type="button" class="copy" id="copyZelle">Copy address</button></div><p class="meta">For another method or a payment plan, email the board at ' + mail + '.</p>' : '<p class="note">Something look wrong? Email the board at ' + mail + '.</p>');
