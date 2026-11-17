@@ -331,6 +331,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
       <button type="submit" class="btn" id="boardAddBtn">Add</button>
     </form>
     <div class="card" id="boardMoney" hidden></div>
+    <div class="card" id="boardLogins" hidden></div>
     <details class="card" id="boardDoneWrap" hidden><summary id="boardDoneSum"></summary><ul class="btlist" id="boardDone"></ul></details>
     <p class="meta">New items are picked up from board email, Slack and minutes once a day. Ticking a box saves straight away for the whole board.</p>
   </section>
@@ -646,6 +647,18 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
       if(credit.length) mh += '<p class="meta">Paid ahead or overpaid: ' + credit.map(function(r){ return esc(r.name) + ' (' + money(r.credit) + ')'; }).join(', ') + '</p>';
     }
     $('boardMoney').innerHTML = mh; $('boardMoney').hidden = !mh;
+    var L = D.logins, lh = '';
+    if(L){
+      var when = function(s){ var m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(s || ''); if(!m) return '—'; var h = +m[4]; return MON[+m[2] - 1] + ' ' + (+m[3]) + ', ' + ((h % 12) || 12) + ':' + m[5] + (h < 12 ? ' AM' : ' PM'); };
+      var seen = L.filter(function(p){ return p.visits > 0; }).sort(function(x, y){ return x.lastVisit < y.lastVisit ? 1 : x.lastVisit > y.lastVisit ? -1 : 0; });
+      var never = L.filter(function(p){ return !p.visits; }).map(function(p){ return p.name; }).sort();
+      lh = '<div class="head"><h2>Who’s using the dashboard</h2><span class="meta">' + seen.length + ' of ' + L.length + ' have visited</span></div>';
+      if(seen.length) lh += '<div class="scroll"><table><thead><tr><th>Who</th><th class="r">Visits</th><th>Last visit</th><th class="r">Sign-ins</th><th>Last sign-in</th></tr></thead><tbody>' +
+        seen.map(function(p){ return '<tr><td>' + esc(p.name) + '</td><td class="r num">' + p.visits + '</td><td style="white-space:nowrap">' + esc(when(p.lastVisit)) + '</td><td class="r num">' + p.signins + '</td><td style="white-space:nowrap">' + esc(when(p.lastSignin)) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+      if(never.length) lh += '<p class="meta">Not visited yet (' + never.length + '): ' + never.map(esc).join(', ') + '</p>';
+      lh += '<p class="meta">A visit is counted at most once per half hour. A sign-in is clicking an emailed link, which lasts 30 days, so visits are the better measure.</p>';
+    }
+    $('boardLogins').innerHTML = lh; $('boardLogins').hidden = !lh;
     function item(t){
       var days = t.due ? Math.round((d(t.due) - d(today)) / 86400000) : null;
       var due = t.due ? '<span class="tag' + (!t.done && days < 0 ? ' late' : !t.done && days <= 7 ? ' long' : '') + '">' + (t.done ? 'Was due ' : days < 0 ? 'Past due · ' : 'Due ') + esc(wmd(t.due)) + (!t.done && days >= 0 ? ' · ' + rel(days) : '') + '</span>' : '';
