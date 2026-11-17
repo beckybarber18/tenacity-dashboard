@@ -241,6 +241,10 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
 .addrow .btn:disabled{opacity:.6}
 #boardDoneWrap summary{cursor:pointer;font-weight:600;min-height:28px}
 .warnnote{background:var(--warn-bg);color:var(--warn-2)}
+
+.tiles.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:700px){.tiles.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#view-board{display:flex;flex-direction:column;gap:16px}#view-board[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -305,16 +309,17 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
 
   <section class="view" id="view-board" hidden>
     <div class="pagehead">
-      <div><h1>Board to-dos</h1><p class="meta" id="boardCount"></p></div>
+      <div><h1>Board</h1><p class="meta" id="boardCount"></p></div>
     </div>
     <p class="note warnnote" id="boardMsg" role="alert" hidden></p>
-    <div class="card"><ul class="btlist" id="boardOpen"></ul></div>
+    <div class="card"><div class="head"><h2>To-dos</h2></div><ul class="btlist" id="boardOpen"></ul></div>
     <form class="card addrow" id="boardAdd">
       <div class="field grow"><label for="boardTask">Add a to-do</label><input id="boardTask" type="text" maxlength="200" placeholder="What needs doing?" autocomplete="off"></div>
       <div class="field"><label for="boardDue">Due (optional)</label><input id="boardDue" type="date"></div>
       <div class="field"><label for="boardOwner">Who (optional)</label><input id="boardOwner" type="text" maxlength="60" placeholder="Name" autocomplete="off"></div>
       <button type="submit" class="btn" id="boardAddBtn">Add</button>
     </form>
+    <div class="card" id="boardMoney" hidden></div>
     <details class="card" id="boardDoneWrap" hidden><summary id="boardDoneSum"></summary><ul class="btlist" id="boardDone"></ul></details>
     <p class="meta">New items are picked up from board email, Slack and minutes once a day. Ticking a box saves straight away for the whole board.</p>
   </section>
@@ -610,6 +615,23 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
     var done = all.filter(function(t){ return t.done; }).sort(function(x, y){ return (y.doneOn || '') < (x.doneOn || '') ? -1 : 1; });
     var late = open.filter(function(t){ return t.due && t.due < today; }).length;
     $('boardCount').textContent = open.length + ' open' + (late ? ' · ' + late + ' past due' : '') + ' · ' + done.length + ' done · only board members can see this page';
+    var M = D.money, mh = '';
+    if(M){
+      var T = M.totals, behind = M.rows.filter(function(r){ return r.overdue > 0; }), gearOnly = M.rows.filter(function(r){ return !r.overdue && r.gear > 0; }), credit = M.rows.filter(function(r){ return r.credit > 0; });
+      mh = '<div class="head"><h2>Dues at a glance</h2><span class="meta">From the Dues Tracker · ' + M.people + ' people</span></div>' +
+        '<div class="tiles four"><div class="tile ' + (T.behind ? 'warn' : 'ok') + '"><span>Behind on dues</span><b class="num">' + T.behind + (T.behind === 1 ? ' person' : ' people') + '</b></div>' +
+        '<div class="tile' + (T.overdue ? ' warn' : '') + '"><span>Total overdue</span><b class="num">' + money(T.overdue) + '</b></div>' +
+        '<div class="tile' + (T.gear ? ' warn' : '') + '"><span>Gear and fees owed</span><b class="num">' + money(T.gear) + '</b></div>' +
+        '<div class="tile"><span>Dues still to come in</span><b class="num">' + money(T.left) + '</b></div></div>';
+      if(behind.length || gearOnly.length){
+        mh += '<div class="scroll"><table><thead><tr><th>Who</th><th class="r">Overdue</th><th>Since</th><th class="r">Gear owed</th><th class="r">Left this season</th><th>Next payment</th></tr></thead><tbody>' +
+          behind.concat(gearOnly).map(function(r){
+            return '<tr><td>' + esc(r.name) + '</td><td class="r num ' + (r.overdue ? 'st-due' : '') + '">' + (r.overdue ? money(r.overdue) : '—') + '</td><td style="white-space:nowrap">' + (r.since ? esc(md(r.since)) : '—') + '</td><td class="r num">' + (r.gear ? money(r.gear) : '—') + '</td><td class="r num">' + (r.left ? money(r.left) : '—') + '</td><td style="white-space:nowrap">' + (r.next ? money(r.next.amount) + ' on ' + esc(md(r.next.due)) : '—') + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+      } else mh += '<p class="note">Everyone is up to date on dues and gear.</p>';
+      if(credit.length) mh += '<p class="meta">Paid ahead or overpaid: ' + credit.map(function(r){ return esc(r.name) + ' (' + money(r.credit) + ')'; }).join(', ') + '</p>';
+    }
+    $('boardMoney').innerHTML = mh; $('boardMoney').hidden = !mh;
     function item(t){
       var days = t.due ? Math.round((d(t.due) - d(today)) / 86400000) : null;
       var due = t.due ? '<span class="tag' + (!t.done && days < 0 ? ' late' : !t.done && days <= 7 ? ' long' : '') + '">' + (t.done ? 'Was due ' : days < 0 ? 'Past due · ' : 'Due ') + esc(wmd(t.due)) + (!t.done && days >= 0 ? ' · ' + rel(days) : '') + '</span>' : '';
