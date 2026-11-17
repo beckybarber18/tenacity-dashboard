@@ -447,19 +447,26 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
   }
   function fail(){ $('authCard').innerHTML = '<h1>Something went wrong</h1><p>The dashboard couldn’t load. Please reload the page. If it keeps happening, email the board.</p>'; show('auth'); }
 
+  // The last page this person saw is kept on their own device so the next visit appears at once,
+  // then is replaced by fresh data a moment later. It is removed on sign-out.
+  var LAST = 'tt_last';
+  function keep(res){ try { localStorage.setItem(LAST, JSON.stringify({ k: token.slice(0, 16), d: res })); } catch(e){} }
+  function kept(){ try { var o = JSON.parse(localStorage.getItem(LAST) || 'null'); return o && o.k === token.slice(0, 16) && o.d && o.d.auth ? o.d : null; } catch(e){ return null; } }
+  function getPhotos(){ if(photos === null){ photos = {}; call('getPhotos', [token]).then(function(p){ photos = p || {}; drawRoster(); }, function(){ }); } }
   function load(refresh){
     return call('getDashboard', [token, viewAs, !!refresh]).then(function(res){
-      if(!res || !res.auth){ token = ''; try { localStorage.removeItem(KEY); } catch(e){} signInForm(''); return; }
+      if(!res || !res.auth){ token = ''; D = null; try { localStorage.removeItem(KEY); localStorage.removeItem(LAST); } catch(e){} signInForm(''); return; }
       if(refresh){ photos = null; big = {}; } // photos and their crops change together, so reload both
       D = res;
+      if(!viewAs) keep(res);
       if(firstLoad){ firstLoad = false; if(D.board) tab = 'board'; } // board members land on the Board page
       if(tab === 'board' && !D.board) tab = 'home'; render(); show(tab);
-      if(photos === null){ photos = {}; call('getPhotos', [token]).then(function(p){ photos = p || {}; drawRoster(); }, function(){}); }
-    }, fail);
+      getPhotos();
+    }, function(){ if(!D) fail(); }); // if a saved copy is already on screen, keep showing it
   }
   $('signOut').addEventListener('click', function(){
     var t = token; token = ''; D = null; viewAs = ''; photos = null; firstLoad = true; tab = 'home';
-    try { localStorage.removeItem(KEY); } catch(e){}
+    try { localStorage.removeItem(KEY); localStorage.removeItem(LAST); } catch(e){}
     call('signOut', [t]).then(function(){}, function(){});
     signInForm('');
   });
@@ -784,7 +791,11 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
       else if(token) load(false);
       else signInForm('That sign-in link has expired or was already used. Enter your email for a new one.');
     }, fail);
-  } else if(token) load(false);
+  } else if(token){
+    var was = kept();
+    if(was){ D = was; firstLoad = false; if(D.board) tab = 'board'; try { render(); show(tab); getPhotos(); } catch(e){ D = null; firstLoad = true; tab = 'home'; } }
+    load(false);
+  }
   else signInForm('');
 })();
 
