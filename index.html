@@ -245,6 +245,17 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
 .tiles.four{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:700px){.tiles.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #view-board{display:flex;flex-direction:column;gap:16px}#view-board[hidden]{display:none}
+
+.lnk{flex:none;align-self:flex-start;border:0;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--purple);min-height:32px;padding:0 6px;border-radius:8px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.lnk:hover{color:var(--purple-dark)}
+.lnk.danger,.pill.danger{color:#8A1F11}.pill.danger{border-color:#8A1F11}
+.bedit{flex:1;display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;min-width:0}
+.bedit .field{min-width:150px}.bedit .grow{flex:1 1 280px}.bedit .wide{flex:1 1 100%}
+.bedit input{width:100%}
+.bedit .bbtns{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.bedit .btn{border:0;font-family:inherit;cursor:pointer}
+.bedit .lnk{margin-left:auto;align-self:center}
+.bt.editing{background:var(--soft);border-radius:12px;padding:14px;border-top:0}
 </style>
 </head>
 <body>
@@ -604,7 +615,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
   $('schedFilters').addEventListener('click', function(ev){ var b = ev.target.closest('button'); if(b){ schedType = b.getAttribute('data-type'); drawSchedule(); } });
 
   // ---------- Board tab (board members only; the server sends D.board to no one else) ----------
-  var boardBusy = false;
+  var boardBusy = false, boardEdit = '', boardAsk = false;
   function drawBoard(){
     var has = !!(D && D.board);
     $('tabBoard').hidden = !has;
@@ -637,7 +648,16 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
       var due = t.due ? '<span class="tag' + (!t.done && days < 0 ? ' late' : !t.done && days <= 7 ? ' long' : '') + '">' + (t.done ? 'Was due ' : days < 0 ? 'Past due · ' : 'Due ') + esc(wmd(t.due)) + (!t.done && days >= 0 ? ' · ' + rel(days) : '') + '</span>' : '';
       var who = t.owner ? '<span class="chip">' + esc(t.owner) + '</span>' : '';
       var sub = [t.notes ? esc(t.notes) : '', t.source ? 'From: ' + esc(t.source) : '', t.done && t.doneBy ? 'Done by ' + esc(t.doneBy) + (t.doneOn ? ' on ' + esc(md(t.doneOn)) : '') : ''].filter(Boolean).join(' · ');
-      return '<li class="bt' + (t.done ? ' done' : '') + '"><button type="button" class="check" role="checkbox" aria-checked="' + (t.done ? 'true' : 'false') + '" data-id="' + esc(t.id) + '" aria-label="' + (t.done ? 'Mark as not done: ' : 'Mark as done: ') + esc(t.task) + '"><span aria-hidden="true">' + (t.done ? '✓' : '') + '</span></button><div class="bi"><span class="what"><span class="t">' + esc(t.task) + '</span>' + due + who + '</span>' + (sub ? '<span class="more">' + sub + '</span>' : '') + '</div></li>';
+      if(boardEdit === t.id){
+        return '<li class="bt editing"><form class="bedit" data-form="' + esc(t.id) + '"><div class="field grow"><label for="beTask">To-do</label><input id="beTask" type="text" maxlength="200" value="' + esc(t.task) + '"></div>' +
+          '<div class="field"><label for="beDue">Due</label><input id="beDue" type="date" value="' + esc(t.due || '') + '"></div>' +
+          '<div class="field"><label for="beOwner">Who</label><input id="beOwner" type="text" maxlength="60" value="' + esc(t.owner || '') + '"></div>' +
+          '<div class="field wide"><label for="beNotes">Notes</label><input id="beNotes" type="text" maxlength="500" value="' + esc(t.notes || '') + '"></div>' +
+          '<div class="bbtns">' + (boardAsk ? '<span class="meta">Remove this to-do for the whole board?</span><button type="button" class="pill danger" data-act="remove-yes">Yes, remove</button><button type="button" class="pill" data-act="remove-no">Keep it</button>'
+            : '<button type="submit" class="btn">Save</button><button type="button" class="pill" data-act="cancel">Cancel</button><button type="button" class="lnk danger" data-act="remove">Remove</button>') + '</div></form></li>';
+      }
+      var edit = '<button type="button" class="lnk" data-act="edit" data-id="' + esc(t.id) + '" aria-label="Edit: ' + esc(t.task) + '">Edit</button>';
+      return '<li class="bt' + (t.done ? ' done' : '') + '"><button type="button" class="check" role="checkbox" aria-checked="' + (t.done ? 'true' : 'false') + '" data-id="' + esc(t.id) + '" aria-label="' + (t.done ? 'Mark as not done: ' : 'Mark as done: ') + esc(t.task) + '"><span aria-hidden="true">' + (t.done ? '✓' : '') + '</span></button><div class="bi"><span class="what"><span class="t">' + esc(t.task) + '</span>' + due + who + '</span>' + (sub ? '<span class="more">' + sub + '</span>' : '') + '</div>' + edit + '</li>';
     }
     $('boardOpen').innerHTML = open.length ? open.map(item).join('') : '<li class="empty">Nothing open. 🎉</li>';
     $('boardDoneWrap').hidden = !done.length;
@@ -651,11 +671,30 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
       function(err){ boardBusy = false; drawBoard(); boardSay((err && err.message) || 'That didn’t save. Please try again.'); });
   }
   $('view-board').addEventListener('click', function(ev){
+    var act = ev.target.closest('[data-act]');
+    if(act && !boardBusy && D && D.board){
+      var what = act.getAttribute('data-act');
+      if(what === 'edit'){ boardEdit = act.getAttribute('data-id'); boardAsk = false; boardSay(''); drawBoard(); var f = $('beTask'); if(f) f.focus(); }
+      else if(what === 'cancel'){ boardEdit = ''; boardAsk = false; drawBoard(); }
+      else if(what === 'remove'){ boardAsk = true; drawBoard(); }
+      else if(what === 'remove-no'){ boardAsk = false; drawBoard(); }
+      else if(what === 'remove-yes'){ var rid = boardEdit; boardEdit = ''; boardAsk = false; D.board = D.board.filter(function(t){ return t.id !== rid; }); drawBoard(); boardCall('removeBoardTodo', [rid]); }
+      return;
+    }
     var b = ev.target.closest('button.check'); if(!b || boardBusy || !D || !D.board) return;
     var id = b.getAttribute('data-id'), to = b.getAttribute('aria-checked') !== 'true';
     D.board.forEach(function(t){ if(t.id === id){ t.done = to; if(to){ t.doneBy = D.viewer.name; t.doneOn = D.asOf; } } });
     drawBoard(); // show it straight away; the server's copy replaces it when the save finishes
     boardCall('setBoardDone', [id, to]);
+  });
+  $('view-board').addEventListener('submit', function(ev){
+    var f = ev.target.closest('form.bedit'); if(!f) return;
+    ev.preventDefault();
+    var id = f.getAttribute('data-form'), task = $('beTask').value.trim(), due = $('beDue').value, owner = $('beOwner').value.trim(), notes = $('beNotes').value.trim();
+    if(!task){ boardSay('The to-do needs some text.'); return; }
+    D.board.forEach(function(t){ if(t.id === id){ t.task = task; t.due = due; t.owner = owner; t.notes = notes; } });
+    boardEdit = ''; boardAsk = false; drawBoard();
+    boardCall('editBoardTodo', [id, task, due, owner, notes]);
   });
   $('boardAdd').addEventListener('submit', function(ev){
     ev.preventDefault();
