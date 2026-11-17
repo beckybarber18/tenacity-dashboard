@@ -218,6 +218,29 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
 
 .brand{display:flex;align-items:center;gap:10px}
 .brand .logo{height:44px;width:auto;flex:none;display:block}
+
+.btlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.bt{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.bt:first-child{border-top:0;padding-top:0}.bt:last-child{padding-bottom:0}
+.bt .check{flex:none;width:44px;height:44px;margin:-8px -6px -8px -8px;border:0;background:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.bt .check span{width:24px;height:24px;border-radius:7px;border:2px solid #8F7CB3;background:#fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;line-height:1}
+.bt .check[aria-checked="true"] span{background:var(--ok);border-color:var(--ok)}
+.bt .check:hover span{border-color:var(--purple)}
+.bt .bi{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+.bt .what{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.bt .t{font-size:15px;font-weight:600}
+.bt.done .t{font-weight:500;color:var(--ink-3);text-decoration:line-through}
+.bt .more{font-size:13px;color:var(--ink-3);overflow-wrap:anywhere}
+.tag.late{background:#FBE3E0;color:#8A1F11}
+.btlist .empty{padding:4px 0;color:var(--ink-3)}
+.addrow{flex-direction:row;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.addrow .field{display:flex;flex-direction:column;gap:4px;min-width:150px}
+.addrow .grow{flex:1 1 260px}
+.addrow input{width:100%}
+.addrow .btn{border:0;font-family:inherit;cursor:pointer}
+.addrow .btn:disabled{opacity:.6}
+#boardDoneWrap summary{cursor:pointer;font-weight:600;min-height:28px}
+.warnnote{background:var(--warn-bg);color:var(--warn-2)}
 </style>
 </head>
 <body>
@@ -230,6 +253,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
     <button type="button" data-tab="home">Home</button>
     <button type="button" data-tab="schedule">Schedule</button>
     <button type="button" data-tab="roster">Roster</button>
+    <button type="button" data-tab="board" id="tabBoard" hidden>Board</button>
   </nav>
 </header>
 <div class="preview" id="adminBar" hidden><div class="wrap">
@@ -277,6 +301,22 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
     <div class="pills" id="rosterFilters" role="group" aria-label="Filter the roster"></div>
     <ul class="people" id="rosterBody"></ul>
     <p class="empty" id="rosterEmpty" hidden>No one matches that search.</p>
+  </section>
+
+  <section class="view" id="view-board" hidden>
+    <div class="pagehead">
+      <div><h1>Board to-dos</h1><p class="meta" id="boardCount"></p></div>
+    </div>
+    <p class="note warnnote" id="boardMsg" role="alert" hidden></p>
+    <div class="card"><ul class="btlist" id="boardOpen"></ul></div>
+    <form class="card addrow" id="boardAdd">
+      <div class="field grow"><label for="boardTask">Add a to-do</label><input id="boardTask" type="text" maxlength="200" placeholder="What needs doing?" autocomplete="off"></div>
+      <div class="field"><label for="boardDue">Due (optional)</label><input id="boardDue" type="date"></div>
+      <div class="field"><label for="boardOwner">Who (optional)</label><input id="boardOwner" type="text" maxlength="60" placeholder="Name" autocomplete="off"></div>
+      <button type="submit" class="btn" id="boardAddBtn">Add</button>
+    </form>
+    <details class="card" id="boardDoneWrap" hidden><summary id="boardDoneSum"></summary><ul class="btlist" id="boardDone"></ul></details>
+    <p class="meta">New items are picked up from board email, Slack and minutes once a day. Ticking a box saves straight away for the whole board.</p>
   </section>
   <footer class="foot" id="foot"></footer>
 </main>
@@ -355,7 +395,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
   var D = null, viewAs = '', tab = 'home', schedType = 'All', rosterTeam = 'All', photos = null;
 
   function show(which){
-    ['auth','home','schedule','roster'].forEach(function(t){ $('view-' + t).hidden = t !== which; });
+    ['auth','home','schedule','roster','board'].forEach(function(t){ $('view-' + t).hidden = t !== which; });
     var signedIn = which !== 'auth';
     $('tabs').hidden = !signedIn; $('whoRow').hidden = !signedIn;
     if(!signedIn) $('adminBar').hidden = true;
@@ -393,7 +433,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
     return call('getDashboard', [token, viewAs, !!refresh]).then(function(res){
       if(!res || !res.auth){ token = ''; try { localStorage.removeItem(KEY); } catch(e){} signInForm(''); return; }
       if(refresh){ photos = null; big = {}; } // photos and their crops change together, so reload both
-      D = res; render(); show(tab);
+      D = res; if(tab === 'board' && !D.board) tab = 'home'; render(); show(tab);
       if(photos === null){ photos = {}; call('getPhotos', [token]).then(function(p){ photos = p || {}; drawRoster(); }, function(){}); }
     }, fail);
   }
@@ -540,7 +580,7 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
     $('linksCard').innerHTML = '<h2>Links</h2><div class="linkgroups">' + lg + '</div>';
 
     $('schedSub').textContent = 'Everything coming up for ' + [me.adult ? 'Adult' : '', me.openAdult ? 'Open Adult' : ''].filter(Boolean).join(' and ') + '.';
-    drawSchedule(); drawRoster();
+    drawSchedule(); drawRoster(); drawBoard();
   }
 
   function press(box, attr, val){ Array.prototype.forEach.call(box.querySelectorAll('button'), function(b){ b.setAttribute('aria-pressed', String(b.getAttribute(attr) === val)); }); }
@@ -557,6 +597,51 @@ button.avatar{cursor:zoom-in;position:relative;overflow:hidden}
     $('schedList').innerHTML = list.length ? html + '</div>' : '<p class="empty">Nothing of that kind is scheduled.</p>';
   }
   $('schedFilters').addEventListener('click', function(ev){ var b = ev.target.closest('button'); if(b){ schedType = b.getAttribute('data-type'); drawSchedule(); } });
+
+  // ---------- Board tab (board members only; the server sends D.board to no one else) ----------
+  var boardBusy = false;
+  function drawBoard(){
+    var has = !!(D && D.board);
+    $('tabBoard').hidden = !has;
+    if(!has) return;
+    var today = D.asOf, all = D.board.slice();
+    var byDue = function(x, y){ return (x.due || '9999') < (y.due || '9999') ? -1 : (x.due || '9999') > (y.due || '9999') ? 1 : 0; };
+    var open = all.filter(function(t){ return !t.done; }).sort(byDue);
+    var done = all.filter(function(t){ return t.done; }).sort(function(x, y){ return (y.doneOn || '') < (x.doneOn || '') ? -1 : 1; });
+    var late = open.filter(function(t){ return t.due && t.due < today; }).length;
+    $('boardCount').textContent = open.length + ' open' + (late ? ' · ' + late + ' past due' : '') + ' · ' + done.length + ' done · only board members can see this page';
+    function item(t){
+      var days = t.due ? Math.round((d(t.due) - d(today)) / 86400000) : null;
+      var due = t.due ? '<span class="tag' + (!t.done && days < 0 ? ' late' : !t.done && days <= 7 ? ' long' : '') + '">' + (t.done ? 'Was due ' : days < 0 ? 'Past due · ' : 'Due ') + esc(wmd(t.due)) + (!t.done && days >= 0 ? ' · ' + rel(days) : '') + '</span>' : '';
+      var who = t.owner ? '<span class="chip">' + esc(t.owner) + '</span>' : '';
+      var sub = [t.notes ? esc(t.notes) : '', t.source ? 'From: ' + esc(t.source) : '', t.done && t.doneBy ? 'Done by ' + esc(t.doneBy) + (t.doneOn ? ' on ' + esc(md(t.doneOn)) : '') : ''].filter(Boolean).join(' · ');
+      return '<li class="bt' + (t.done ? ' done' : '') + '"><button type="button" class="check" role="checkbox" aria-checked="' + (t.done ? 'true' : 'false') + '" data-id="' + esc(t.id) + '" aria-label="' + (t.done ? 'Mark as not done: ' : 'Mark as done: ') + esc(t.task) + '"><span aria-hidden="true">' + (t.done ? '✓' : '') + '</span></button><div class="bi"><span class="what"><span class="t">' + esc(t.task) + '</span>' + due + who + '</span>' + (sub ? '<span class="more">' + sub + '</span>' : '') + '</div></li>';
+    }
+    $('boardOpen').innerHTML = open.length ? open.map(item).join('') : '<li class="empty">Nothing open. 🎉</li>';
+    $('boardDoneWrap').hidden = !done.length;
+    $('boardDoneSum').textContent = 'Done (' + done.length + ')';
+    $('boardDone').innerHTML = done.map(item).join('');
+  }
+  function boardSay(msg){ $('boardMsg').textContent = msg || ''; $('boardMsg').hidden = !msg; }
+  function boardCall(name, args, after){
+    if(boardBusy) return; boardBusy = true; boardSay('');
+    call(name, [token].concat(args)).then(function(list){ boardBusy = false; if(list && list.length != null){ D.board = list; } drawBoard(); if(after) after(); },
+      function(err){ boardBusy = false; drawBoard(); boardSay((err && err.message) || 'That didn’t save. Please try again.'); });
+  }
+  $('view-board').addEventListener('click', function(ev){
+    var b = ev.target.closest('button.check'); if(!b || boardBusy || !D || !D.board) return;
+    var id = b.getAttribute('data-id'), to = b.getAttribute('aria-checked') !== 'true';
+    D.board.forEach(function(t){ if(t.id === id){ t.done = to; if(to){ t.doneBy = D.viewer.name; t.doneOn = D.asOf; } } });
+    drawBoard(); // show it straight away; the server's copy replaces it when the save finishes
+    boardCall('setBoardDone', [id, to]);
+  });
+  $('boardAdd').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var t = $('boardTask').value.trim(); if(!t){ boardSay('Type what needs doing first.'); return; }
+    $('boardAddBtn').disabled = true;
+    boardCall('addBoardTodo', [t, $('boardDue').value, $('boardOwner').value.trim()], function(){ $('boardTask').value = ''; $('boardDue').value = ''; $('boardOwner').value = ''; });
+    setTimeout(function(){ $('boardAddBtn').disabled = false; }, 1500);
+  });
 
   $('rosterFilters').innerHTML = [['All','Everyone'],['Adult','Adult'],['Open Adult','Open Adult'],['Coach','Coaches']].map(function(o){ return '<button type="button" class="pill" data-team="' + o[0] + '">' + o[1] + '</button>'; }).join('');
   function drawRoster(){
